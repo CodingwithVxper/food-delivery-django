@@ -21,7 +21,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from proj import views
 
 router = DefaultRouter()
-router.register(r'restaurant', views.RestaurantViewSet, basename='restaurant')
+router.register(r'restaurants', views.RestaurantViewSet, basename='restaurant')
 router.register(r'customers', views.CustomerViewSet, basename='customer')
 router.register(r'menu-items', views.MenuItemViewSet, basename='menuitem')
 router.register(r'orders', views.OrderViewSet, basename='order')

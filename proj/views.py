@@ -2,8 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin,  UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from rest_framework.exceptions import ValidationError, PermissionDenied
+from rest_framework import viewsets, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Restaurant, Customer, MenuItem, Order, OrderItem
-from rest_framework import viewsets, permissions
+from .permissions import IsOwnerOrReadOnly
+from .filters import RestaurantFilter
 from .serializers import (
     RestaurantSerializer,
     CustomerSerializer,
@@ -58,12 +62,18 @@ class RestaurantDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 class RestaurantViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows YourModel objects to be viewed or edited.
+    API endpoint that allows Restaurant objects to be viewed or edited.
     Provides list, create, retrieve, update, partial_update, destroy actions.
     """
-    queryset = Restaurant.objects.all().order_by('-id')  # Or appropriate ordering
+    queryset = Restaurant.objects.all().order_by('-id')
     serializer_class = RestaurantSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    search_fields = ['name', 'address', 'cuisine']
+    filter_backends = [DjangoFilterBackend,
+                       filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = RestaurantFilter
+    ordering_fields = ['name', 'id']
+    ordering = ['-id']
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -73,6 +83,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all().order_by('-id')
     serializer_class = CustomerSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        if hasattr(self.request.user, 'customer'):
+            raise ValidationError("You already have a customer profile.")
+        serializer.save(user=self.request.user)
 
 
 class MenuItemViewSet(viewsets.ModelViewSet):
@@ -87,7 +102,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(customer=self.request.user.customer)
+        customer = getattr(self.request.user, 'customer', None)
+        if customer is None:
+            raise PermissionDenied(
+                "You must be a registered customer to place an order.")
+        serializer.save(customer=customer)
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):

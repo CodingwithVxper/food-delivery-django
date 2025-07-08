@@ -94,3 +94,136 @@ Log in as a regular user and try to update a restaurant → Access denied.
 Log in as a staff user and try updating → Access granted.
 Try deleting a restaurant you didn’t create → Access denied.
 Delete your own restaurant → Should succeed.
+
+API Setup & Usage
+DRF Added
+This project now includes Django REST Framework (DRF) for building and exposing API endpoints.
+
+Base API URL
+The base URL for the API is:
+/api/
+Exposed Models
+The following models are currently available via the API:
+
+Restaurant
+
+Customer
+
+MenuItem
+
+Order
+
+OrderItem
+
+Browsable API Testing
+Run the development server:
+python manage.py runserver
+Log in via the web UI at:
+http://127.0.0.1:8000/accounts/login/
+Visit the API root:
+http://127.0.0.1:8000/api/
+Use the browsable API to:
+
+GET: View data
+
+POST: Create new objects
+
+PUT / PATCH: Update objects
+
+DELETE: Remove objects
+(You must be logged in to perform write operations.)
+
+API Docs (via drf-spectacular)
+If enabled, you can view live API documentation at:
+
+Swagger UI: http://127.0.0.1:8000/api/schema/swagger-ui/
+
+Redoc: http://127.0.0.1:8000/api/schema/redoc/
+
+Example Git Commit
+After adding DRF + views + serializers:
+
+git add .
+git commit -m "feat: Add DRF API endpoints"
+git push
+
+API Filtering, Searching, and Ordering
+You can filter, search, and order data using query parameters:
+
+Filtering
+Use field-based filters directly:
+
+GET /api/restaurants/?cuisine=Italian
+
+GET /api/restaurants/?owner=1
+
+Searching
+Use the search query parameter to match across searchable fields:
+
+GET /api/restaurants/?search=burger
+
+Ordering
+Use the ordering parameter to sort results:
+
+GET /api/restaurants/?ordering=name
+
+GET /api/restaurants/?ordering=-id (descending order)
+
+Pagination
+API list endpoints are paginated by default.
+
+Response includes: count, next, previous, and results keys.
+
+Use ?page=<number> to navigate pages:
+
+GET /api/restaurants/?page=2
+
+Default page size is configured in settings.py under REST_FRAMEWORK['PAGE_SIZE'].
+
+Permissions
+We use a custom permission: IsOwnerOrReadOnly
+
+Any authenticated user can view any object (GET).
+Only the owner of the object can edit or delete it (PUT/PATCH/DELETE).
+
+Example:
+
+User A creates a restaurant.
+
+User B can view it.
+
+User B cannot modify/delete it.
+Testing Instructions
+To test permissions and filters:
+
+1. Authentication
+   Log in as User A and User B (create users if needed via Django admin or signup endpoint).
+
+2. Test Ownership Permissions
+   User A:
+
+POST /api/restaurants/ – create a restaurant.
+
+User B:
+
+GET /api/restaurants/<id>/ – should succeed.
+
+PUT/PATCH/DELETE /api/restaurants/<id>/ – should return 403 Forbidden.
+
+POST /api/restaurants/ – should create a new object owned by User B.
+
+PUT/PATCH/DELETE their own object – should succeed.
+
+3. Test Filtering, Searching, Ordering
+   GET /api/restaurants/?cuisine=Thai
+
+GET /api/restaurants/?search=pizza
+
+GET /api/restaurants/?ordering=-name
+
+4. Test Pagination
+   Ensure enough objects exist, then:
+
+GET /api/restaurants/?page=1
+
+GET /api/restaurants/?page=2
